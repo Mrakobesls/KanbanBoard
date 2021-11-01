@@ -1,0 +1,60 @@
+trigger:
+  branches:
+    include:
+      - main
+
+variables:
+  apiProjectPath: 'Board/BoardApp.WebApi/BoardApp.WebApi.csproj'
+  apiSolutionPath: 'Board/Board.sln'
+  buildConfiguration: 'Release'
+  testProjectsPath: 'Board/Tests/**/*.csproj'
+
+resources:
+  repositories:
+  - repository: self
+    type: git
+    ref: main
+jobs:
+- job: Job_1
+  displayName: Job
+  pool:
+    vmImage: windows-2019
+
+  steps:
+
+  - checkout: self
+    clean: true
+
+  - task: NuGetCommand@2
+    displayName: NuGet restore
+    inputs:
+      solution: $(apiSolutionPath)
+
+  - task: DotNetCoreCLI@2
+    displayName: Build
+    inputs:
+      projects: $(apiProjectPath)
+      arguments: --configuration $(buildConfiguration) --no-restore
+
+  - task: DotNetCoreCLI@2
+    displayName: Test
+    inputs:
+      command: test
+      projects: $(testProjectsPath)
+      arguments: --configuration $(buildConfiguration)
+
+  - task: DotNetCoreCLI@2
+    displayName: Publish
+    inputs:
+      command: publish
+      publishWebProjects: false
+      projects: $(apiProjectPath)
+      arguments: --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/publish
+      zipAfterPublish: false
+      modifyOutputPath: false
+
+  - task: PublishBuildArtifacts@1
+    displayName: Publish Artifacts
+    inputs:
+      ArtifactName: BoardApi.$(Build.BuildNumber)
+...
